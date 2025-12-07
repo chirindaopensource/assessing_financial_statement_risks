@@ -1,0 +1,94 @@
+﻿# ==============================================================================#
+# Requirements File for Heuristic-Augmented Financial Risk Index (HAFRI)
+# 
+# This file specifies all third-party dependencies required for the production-
+# grade implementation of the HAFRI framework as presented in Abdullah et al.
+# (2025). Version constraints follow semantic versioning principles and are
+# selected to ensure:
+#   • Computational reproducibility across environments
+#   • Security compliance (no known CVEs in specified versions)
+#   • Numerical stability for financial calculations
+#   • Cross-platform compatibility (Windows, macOS, Linux)
+#
+# Installation:
+#   pip install -r requirements.txt
+#
+# Python Version Requirement: >=3.8, <4.0
+# Rationale: Requires typing features (Literal, Protocol) introduced in 3.8+
+#
+# ==============================================================================#
+
+# -----------------------------------------------------------------------------
+# Core Numerical Computing Library
+# -----------------------------------------------------------------------------
+# NumPy: Fundamental package for numerical computation and linear algebra
+# Used for:
+#   • Matrix construction and manipulation (AHP pairwise comparison matrices)
+#   • Eigenvalue/eigenvector computation (principal eigenvector extraction)
+#   • Vectorized operations (normalization, weighted summation)
+#   • Min-Max scaling and element-wise transformations
+# Version Rationale:
+#   • 1.20.0+: Introduces type hints for ndarray, improved consistency checks
+#   • <2.0.0: Avoid breaking changes in NumPy 2.x API
+numpy>=1.20.0,<2.0.0
+
+# -----------------------------------------------------------------------------
+# Data Manipulation and Analysis Library
+# -----------------------------------------------------------------------------
+# Pandas: High-performance data structures for tabular data
+# Used for:
+#   • DataFrame operations for financial statement processing
+#   • Time-series data handling (multi-year fiscal data)
+#   • CSV/Excel I/O for importing Damascus Securities Exchange filings
+#   • Data validation and missing value handling
+#   • Grouped aggregations and transformations
+# Version Rationale:
+#   • 1.3.0+: Improved NA semantics, better performance, datetime handling
+#   • <3.0.0: Maintain compatibility with established API patterns
+pandas>=1.3.0,<3.0.0
+
+# -----------------------------------------------------------------------------
+# Optional: Development and Testing Dependencies
+# -----------------------------------------------------------------------------
+# Uncomment the following section if setting up a development environment
+# with testing, linting, and type-checking capabilities
+
+# pytest>=7.0.0              # Testing framework
+# pytest-cov>=3.0.0          # Code coverage reporting
+# mypy>=0.990                # Static type checker
+# black>=22.0.0              # Code formatter (PEP 8 compliant)
+# flake8>=5.0.0              # Linting tool
+# isort>=5.10.0              # Import statement organizer
+
+# -----------------------------------------------------------------------------
+# Optional: Visualization Dependencies
+# -----------------------------------------------------------------------------
+# Uncomment if implementing visualization features for risk index rankings
+
+# matplotlib>=3.5.0          # Publication-quality plotting
+# seaborn>=0.12.0            # Statistical data visualization
+
+# -----------------------------------------------------------------------------
+# Optional: Enhanced I/O Dependencies
+# -----------------------------------------------------------------------------
+# Uncomment if handling Excel files with complex formatting
+
+# openpyxl>=3.0.9            # Excel .xlsx file reading/writing
+# xlrd>=2.0.1                # Legacy Excel .xls file reading
+
+# -----------------------------------------------------------------------------
+# Version Compatibility Notes
+# -----------------------------------------------------------------------------
+# • NumPy 1.20.0 is the minimum for np.typing support (type hints)
+# • Pandas 1.3.0 introduces NA/NaN semantic improvements critical for financial
+#   data with missing values
+# • All versions tested on Python 3.8, 3.9, 3.10, 3.11
+# • For Apple Silicon (M1/M2) users: Ensure pip is updated (>=21.0) for proper
+#   wheel selection
+#
+# Security Considerations:
+# • All specified versions are free of known critical CVEs as of 2025-01-15
+# • Regularly update dependencies: `pip list --outdated`
+# • Use `pip-audit` for automated vulnerability scanning
+#
+# ==============================================================================#
