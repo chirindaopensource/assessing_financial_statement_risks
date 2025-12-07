@@ -1,0 +1,303 @@
+﻿# =========================================================================
+# Heuristic-Augmented Financial Risk Index (HAFRI) Configuration
+# =========================================================================
+# This configuration file defines the parameters, schemas, and logic for the
+# HAFRI pipeline as specified in "Assessing Financial Statement Risks among
+# MCDM Techniques".
+# =========================================================================
+
+# =========================================================================
+# SECTION 1: METADATA & SCOPE
+# =========================================================================
+metadata:
+  study_title: "Assessing Financial Statement Risks among MCDM Techniques"
+  target_entity: "Al-Ahlia Vegetable Oil Company"
+  currency: "Syrian Pounds (SYP)"
+  unit_scale: "Millions"
+  time_horizon:
+    start_year: 2008
+    end_year: 2017
+    total_periods: 10
+    source: "10 fiscal years, 2008–2017"
+  expert_panel:
+    count: 5
+    experience_range: "6-14 years"
+    roles:
+      - "Direct sales"
+      - "Islamic banks"
+      - "Banks and stock market"
+      - "Banks and financing institutions"
+      - "Private and public offering"
+    source: "Expert profiles as in the case study"
+
+# =========================================================================
+# SECTION 2: RAW INPUT DATA SCHEMAS (LEVEL 0)
+# =========================================================================
+input_data_schemas:
+  
+  # STREAM A: SUBJECTIVE HEURISTICS
+  expert_survey_schema:
+    columns:
+      expert_id: "String (ID for each of the 5 experts)"
+      hierarchy_level: "String; one of: 'Main_Criteria', 'Sub_CSR', 'Sub_LR', 'Sub_IR', 'Sub_CFR'"
+      criterion_i: "String (Row criterion label, e.g. 'CSR3', 'LR2')"
+      criterion_j: "String (Column criterion label, e.g. 'CFR5')"
+      saaty_scale_value: "Float ∈ {1,2,3,4,5,6,7,8,9} (direct judgments)"
+      comparison_type: "String (must be 'Direct' for stored entries)"
+    constraints:
+      saaty_scale_value: "Direct inputs in {1..9}. Reciprocals (≤1) are not stored; they are derived via A_ji = 1 / A_ij during matrix construction."
+      symmetry: "For each unordered pair {i,j}, only one direct entry is stored; the reciprocal position in the AHP matrix is constructed as 1/x."
+
+  # STREAM B: OBJECTIVE ACCOUNTING DATA
+  financial_statement_schema:
+    index: "fiscal_year (Int64, 2008–2017)"
+    columns:
+      # Balance Sheet
+      total_assets: "Float64"
+      current_assets: "Float64"
+      inventory: "Float64"
+      cash_and_equivalents: "Float64"
+      net_fixed_assets: "Float64"
+      total_debt: "Float64"
+      long_term_debt: "Float64"
+      short_term_debt: "Float64"
+      current_liabilities: "Float64"
+      shareholders_equity: "Float64"
+      retained_earnings: "Float64"
+      net_working_capital: "Float64 (or derived: current_assets - current_liabilities)"
+      
+      # Income Statement
+      sales_revenue: "Float64"
+      gross_profit: "Float64"
+      ebit: "Float64 (Earnings Before Interest & Tax)"
+      interest_expense: "Float64"
+      net_profit: "Float64"
+      net_profit_before_interest: "Float64; must satisfy net_profit + interest_expense, used in IR1 and IR5"
+      
+      # Cash Flow Statement
+      net_operating_cash_flow: "Float64"
+      capital_expenditures: "Float64"
+      net_investing_cash_flow: "Float64"
+      net_financing_cash_flow: "Float64"
+      total_cash_flow_inv_fin: "Float64; aggregation of investing and financing CFs used in CFR1"
+      cash_distributions: "Float64 (Dividends or similar payouts)"
+      operating_cash_inflows: "Float64"
+      initial_cash_requirements: "Float64"
+
+# =========================================================================
+# SECTION 3: AHP ALGORITHM PARAMETERS (PROCESS A)
+# =========================================================================
+ahp_parameters:
+  methodology_source: "Analytic Hierarchy Process (AHP) as in the paper"
+  
+  saaty_scale_mapping:
+    "Equal importance": 1.0
+    "Weak importance": 3.0
+    "Strong importance": 5.0
+    "Very strong importance": 7.0
+    "Absolute importance": 9.0
+    "Intermediate values": [2.0, 4.0, 6.0, 8.0]
+
+  random_index_lookup:
+    1: 0.00
+    2: 0.00
+    3: 0.58
+    4: 0.90
+    5: 1.12
+    6: 1.24
+    7: 1.32
+    8: 1.41
+    9: 1.45
+    10: 1.49
+    11: 1.51
+    12: 1.48
+    13: 1.56
+    14: 1.57
+    15: 1.59
+
+  consistency_threshold:
+    metric: "Consistency Ratio (CR)"
+    formula: "CR = CI / RI, with CI = (lambda_max - n) / (n - 1)"
+    max_allowed_value: 0.10
+    action_on_failure: "Flag matrix as inconsistent; expert judgments must be reviewed and pairwise comparisons revised."
+
+  group_aggregation_method: "Arithmetic Mean of Individual Weight Vectors"
+  source_table: "Average weights as in the paper's summary table"
+
+# =========================================================================
+# SECTION 4: FEATURE ENGINEERING (PRE-PROCESSING)
+# =========================================================================
+feature_engineering_logic:
+  
+  # Group 1: Capital Structure Risk (CSR)
+  CSR1:
+    numerator: "total_debt"
+    denominator: "shareholders_equity"
+  CSR2:
+    numerator: "short_term_debt"
+    denominator: "shareholders_equity"
+  CSR3:
+    numerator: "shareholders_equity"
+    denominator: "long_term_debt"
+  CSR4:
+    numerator: "retained_earnings"
+    denominator: "total_assets"
+  CSR5:
+    numerator: "long_term_debt"
+    denominator: "total_assets"
+  CSR6:
+    numerator: "total_debt"
+    denominator: "total_assets"
+  CSR7:
+    numerator: "long_term_debt"
+    denominator: "total_debt"
+  CSR8:
+    numerator: "shareholders_equity"
+    denominator: "net_fixed_assets"
+  CSR9:
+    numerator: "current_assets"
+    denominator: "net_fixed_assets" # proxy for Invested Funds
+  CSR10:
+    numerator: "total_assets"
+    denominator: "shareholders_equity"
+  CSR11:
+    numerator: "net_working_capital"
+    denominator: "shareholders_equity"
+
+  # Group 2: Liquidity Risk (LR)
+  LR1:
+    numerator: "sales_revenue"
+    denominator: "total_assets" # Turnover
+  LR2:
+    numerator: "current_assets - inventory"
+    denominator: "current_liabilities" # Fast Liquidity
+  LR3:
+    numerator: "cash_and_equivalents"
+    denominator: "current_liabilities" # Cash Readiness
+
+  # Group 3: Income Risk (IR)
+  IR1:
+    numerator: "net_profit_before_interest"
+    denominator: "net_profit"
+  IR2:
+    numerator: "gross_profit"
+    denominator: "sales_revenue"
+  IR3:
+    numerator: "net_profit"
+    denominator: "sales_revenue"
+  IR4:
+    numerator: "ebit"
+    denominator: "sales_revenue"
+  IR5:
+    numerator: "net_profit_before_interest"
+    denominator: "total_assets" # matches 'Net profit + interest / total assets'
+  IR6:
+    numerator: "net_profit"
+    denominator: "shareholders_equity"
+
+  # Group 4: Cash Flow Risk (CFR)
+  CFR1:
+    numerator: "net_operating_cash_flow"
+    denominator: "total_cash_flow_inv_fin"
+  CFR2:
+    numerator: "net_operating_cash_flow"
+    denominator: "sales_revenue"
+  CFR3:
+    numerator: "net_operating_cash_flow"
+    denominator: "capital_expenditures"
+  CFR4:
+    numerator: "net_operating_cash_flow"
+    denominator: "current_liabilities"
+  CFR5:
+    numerator: "net_operating_cash_flow"
+    denominator: "net_profit"
+  CFR6:
+    numerator: "net_operating_cash_flow"
+    denominator: "total_assets"
+  CFR7:
+    numerator: "net_operating_cash_flow"
+    denominator: "shareholders_equity"
+  CFR8:
+    numerator: "net_operating_cash_flow"
+    denominator: "long_term_debt"
+  CFR9:
+    numerator: "operating_cash_inflows"
+    denominator: "initial_cash_requirements"
+  CFR10:
+    numerator: "net_operating_cash_flow"
+    denominator: "net_fixed_assets"
+  CFR11:
+    numerator: "net_operating_cash_flow"
+    denominator: "total_debt"
+  CFR12:
+    numerator: "net_operating_cash_flow"
+    denominator: "cash_distributions"
+  CFR13:
+    numerator: "net_operating_cash_flow"
+    denominator: "net_investing_cash_flow"
+  CFR14:
+    numerator: "net_operating_cash_flow"
+    denominator: "net_financing_cash_flow"
+
+# =========================================================================
+# SECTION 5: SAW ALGORITHM PARAMETERS (PROCESS B)
+# =========================================================================
+saw_parameters:
+  methodology_source: "Simple Additive Weighting (SAW) as in the paper"
+  
+  # Criteria directionality (risk semantics)
+  criteria_directionality:
+    benefit_criteria_max:
+      # Higher raw value -> lower risk (to be inverted in normalization)
+      - "CSR4"
+      - "CSR8"
+      - "CSR9"
+      - "CSR10"
+      - "CSR11"
+      - "LR1"
+      - "LR2"
+      - "LR3"
+      - "IR2"
+      - "IR3"
+      - "IR4"
+      - "CFR1"
+      - "CFR2"
+      - "CFR3"
+      - "CFR4"
+      - "CFR5"
+      - "CFR6"
+      - "CFR7"
+      - "CFR8"
+      - "CFR9"
+      - "CFR10"
+      - "CFR11"
+      - "CFR12"
+      - "CFR13"
+      - "CFR14"
+    cost_criteria_min:
+      # Higher raw value -> higher risk (directly)
+      - "CSR1"
+      - "CSR2"
+      - "CSR3"
+      - "CSR5"
+      - "CSR6"
+      - "CSR7"
+      - "IR1"
+      - "IR5"
+      - "IR6"
+
+  # Normalization: risk-coded scores in [0,1]
+  normalization_logic:
+    # For benefit criteria: higher x_ij is better (lower risk),
+    # so normalized risk r_ij must decrease in x_ij.
+    benefit_formula: "(max(x_j) - x_ij) / (max(x_j) - min(x_j))"
+
+    # For cost criteria: higher x_ij is worse (higher risk),
+    # so normalized risk r_ij must increase in x_ij.
+    cost_formula: "(x_ij - min(x_j)) / (max(x_j) - min(x_j))"
+
+    range: "[0, 1], where 0 = least risky, 1 = most risky on that criterion"
+
+  # Aggregation and interpretation
+  ranking_formula: "V_i = Sum_j (w_j * r_ij)"
+  interpretation: "V_i is the composite financial risk score for year i; higher V_i indicates higher overall financial risk (worse risk profile)."
